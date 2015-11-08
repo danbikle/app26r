@@ -93,23 +93,6 @@
           }
           cpasc_a[i]    = row;
         }
-
-        //broken
-        // under construction
-        // This function should return a date given day1 gain
-        function day1g2date(day1g) {
-          // under construction
-          var day1g = -20.0;
-          // under construction
-          // myrows = cpasc_a.filter(function(x){return (x.pctlag === day1g)});
-          myrows = cpasc_a.filter(function(x){return (x.pctlag < day1g)});
-          return myrows
-        }
-        var urrows = day1g2date(-20.0);
-        // under construction
-        //broken
-
-
         // Work towards histogram of day1
         var graph_width  = 840; // RHS
         var xrange_max   = graph_width;
@@ -257,7 +240,6 @@
           // I should add text to green histogram:
           var greendays_pos = greendays.filter(function(x){return (x >= 0.0);});
           var greendays_neg = greendays.filter(function(x){return (x <  0.0);});
-
           var greenpdev = d3.round(d3.deviation(greendays_pos),3);
           var greenndev = d3.round(d3.deviation(greendays_neg),3);
           var greendays_avg = d3.round(d3.mean(greendays),3);
@@ -280,7 +262,6 @@
           h2txt('The green histogram has '+greendays.length+' observations of day2 gains.');
           h2txt('Of those, we have '+greendays_pos.length+' above zero,');
           h2txt('and '+greendays_neg.length+' below zero.');
-          
           h2txt('Pos-Gains Deviation: '+myrnd(greenpdev    ));
           h2txt('Neg-Gains Deviation: '+myrnd(greenndev    ));
           h2txt('The Avg gain was: '   +myrnd(greendays_avg));
