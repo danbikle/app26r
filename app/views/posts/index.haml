@@ -1,0 +1,436 @@
+!!!
+%html(lang="en")
+  %head
+    %meta(content="text/html; charset=UTF-8" http-equiv="Content-Type")/
+    %title Posts#index
+    %link(href="/graph.css" rel="stylesheet" type="text/css")/
+    %link(href="/detail.css" rel="stylesheet" type="text/css")/
+    %link(href="/myassets/site.css" media="all" rel="stylesheet")/
+    %script(src="/d3.v3.min.js")
+    %script(src="/rickshaw.min.js")
+    %script(src="/jquery.min.js")
+    :css
+      #day1histogram       {position: relative;}
+      #day1histogram table {position: absolute; left: 50px; border-width: 0px;}
+      #day1histogram rect {
+        shape-rendering: crispEdges;
+        cursor: pointer; 
+        cursor: hand;
+      }
+      #day2histogram rect {
+        fill: #292;
+        shape-rendering: crispEdges;
+      }
+      #d1d2histogram rect {
+        shape-rendering: crispEdges;
+        cursor: pointer; 
+        cursor: hand;
+      }
+  %body#bodyid
+    %h1 Dan's Day1 -> Day2 Visualization
+    / '
+    %p I collected one day gains of the S&P 500 going back 30 years.
+    %p After I collected these gains, I copied them into an array called day1.
+    %p For each gain in day1, I got a corresponding gain for the day after day1.
+    %p I copied these corresponding gains into an array called day2.
+    %p The blue histogram shows the frequencies of gains for day1.
+    %p After you click a blue bar, the page uses a green histogram to display frequencies of gains for day2.
+    %p
+      For example if day1 has a gain of -2.0%,
+      the gains for day2 follow a positive bias.
+    %p The red line shows most recent gain.
+    %p The red line helps you ask questions:
+    %ul
+      %li In the past did we have many day1-days similar to today?
+      %li For those day1-days, what is the green histogram of day2-days? 
+    %p You should click a blue bar under the red dot.
+    %hr/
+    #day1histogram
+      %table
+    #x_axis1
+      Bar Number (1 Bar spans 0.33%)
+    %hr/
+    #day2histogram
+    %hr/
+    %p The chart below aggregates 16 of the above green histograms.
+    %p The chart below shows negative correlation between day1-gain and day2-gain.
+    %p It tells me to buy when day1 falls more than 0.3%.
+    %p If day1 gains more than 0.0% I should expect day2 to gain less than the median.
+    %hr/
+    #d1d2histogram
+    #x_axis_d1d2histogram
+    %hr/
+    :javascript
+      // I should ensure page scrolled to top
+      function slowscroll(myduration, stophere) {
+        /*This function should slow-scroll
+        and stop at stophere id*/
+        jQuery('html, body').animate({
+          scrollTop: jQuery(stophere).offset().top
+        }, myduration);
+      };
+      slowscroll(1, '#bodyid'); // quickly
+      // I use cpasc_a to store dates,prices,pct-deltas
+      var cpasc_a  = [], day1 = [0.0], day2 = [0.0];
+      d3.csv("/csv/GSPC2.csv", function(error, csv_a) {
+        if (error) throw error;
+        for (rownum = (csv_a.length-1); rownum >= 0; rownum--) {
+          cpasc_a.push({udate:csv_a[rownum].Date, cp:csv_a[rownum].Close});
+        }
+        for (i = 1; i < (cpasc_a.length); i++) {
+          var row     = cpasc_a[i];
+          var cp      = row.cp;
+          var cplag1  = cpasc_a[i-1].cp;
+          var pctlag1 = 100.0*(cp - cplag1)/cplag1;
+          row.pctlag1 = pctlag1;
+          day1[i]     = pctlag1;
+          var leadi   = i+1;
+          if (leadi < cpasc_a.length) {
+            var cplead  = cpasc_a[leadi].cp;
+            var pctlead = 100.0*(cplead - cp)/cp;
+            row.pctlead = pctlead;
+            day2[i]     = pctlead;
+          }
+          cpasc_a[i]    = row;
+        }
+
+        //broken
+        // under construction
+        // This function should return a date given day1 gain
+        function day1g2date(day1g) {
+          // under construction
+          var day1g = -20.0;
+          // under construction
+          // myrows = cpasc_a.filter(function(x){return (x.pctlag === day1g)});
+          myrows = cpasc_a.filter(function(x){return (x.pctlag < day1g)});
+          return myrows
+        }
+        var urrows = day1g2date(-20.0);
+        // under construction
+        //broken
+
+
+        // Work towards histogram of day1
+        var graph_width  = 840; // RHS
+        var xrange_max   = graph_width;
+        var xrange_min   = 0;   // LHS
+        var graph_height = 600;
+        var bincount     = 36; // Should be even number
+        var midbin       = Math.floor(bincount/2);
+        var hrange       = [-6,6];
+        var bluedata        = d3.layout.histogram()
+                            .bins(bincount)
+                            .range(hrange)
+                            (day1);
+        // I should get the min/max value of the price to help draw the chart:
+        // A histogram should have a chartmin = 0
+        var chartmin = 0.0;
+        var get_chartmax = function(rows4chart){
+          var chartmax = rows4chart[0].y;
+          rows4chart.forEach(function(row){
+            if (chartmax < row.y) chartmax=row.y;
+          });
+          return chartmax;
+        }
+        var chartmax1 = get_chartmax(bluedata);
+        chartmax1     = 1.2 * chartmax1;
+        var g1color   = 'steelblue';
+        var graph1    = new Rickshaw.Graph({
+          renderer: 'bar',
+          width:    graph_width, 
+          height:   graph_height,
+          min:      chartmin,
+          max:      chartmax1,
+          element:  document.querySelector("#day1histogram"), 
+          series: [{
+            color: g1color,
+            name:  'Count',
+            data: bluedata
+          }]
+        });
+        var xAxis1      = new Rickshaw.Graph.Axis.X({graph: graph1});
+        var yAxis1      = new Rickshaw.Graph.Axis.Y({graph: graph1});
+        var hoverDetail = new Rickshaw.Graph.HoverDetail({
+          graph: graph1,
+          xFormatter: function(x){return x;}
+        });
+        // I should create 2nd x-axis to count bars
+        var x_axis1_format = function(n) {return n*3;}
+        var x_axis1_ticks  = new Rickshaw.Graph.Axis.X( {
+          graph:       graph1,
+          orientation: 'bottom',
+          tickFormat:  x_axis1_format,
+          element: document.getElementById('x_axis1')
+        });
+        graph1.render();
+        /* I should draw vertical line at today current price.
+        The syntax below helps me map x,y-values to pixel-values: */
+        var x = d3.scale.linear()
+            .domain(hrange)
+            .range([ xrange_min, xrange_max ]);
+        var y = d3.scale.linear()
+            .domain([0,chartmax1])
+            .range([ graph_height, 0 ]);
+        // This my wrapper for d3.svg.line()
+        var lineFunction = d3.svg.line()
+          .x(function(d) { return d.x; })
+          .y(function(d) { return d.y; })
+          .interpolate('linear');
+        // I should use a dot to show most recent gain:
+        var last_day1 = day1[day1.length-1];
+        var h1sel     = d3.select('#day1histogram');
+        var h1svg_sel = h1sel.select('svg');
+        var reddot1   = h1svg_sel.append('circle')
+          .attr('fill','red')
+          .attr('cx', x(last_day1)).attr('cy', y(100))
+          .attr('r',6);
+        // I should have explanatory text in my graph
+        var xtxt = 50, ytxt = 20, ydelt = 30;
+        // Rpt on pos/negative gains:
+        var gainneg = day1.filter(function(x){return (x <  0.0);});
+        var gainpos = day1.filter(function(x){return (x >= 0.0);});
+        // Label X-axis
+        h1svg_sel.append('text').attr('x', graph_width-150).attr('y', graph_height-30)
+          .text('Percent Gain');
+        var h1table_sel = h1sel.select('table');
+        var h1txt = function(txt){h1table_sel.append('tr').append('td').append('span').text(txt);}
+        var myrnd = function(n){return d3.round(n,3)+'%';}
+        h1txt('We have '+day1.length);
+        h1txt('observations of day1 gains.');
+        h1table_sel.append('tr').append('td').append('span')
+          .attr('class','red')
+          .text('Red dot is most recent gain: '+myrnd(last_day1));
+        h1txt('Pos-Gains Deviation: '+myrnd(d3.deviation(gainpos)));
+        h1txt('Neg-Gains Deviation: '+myrnd(d3.deviation(gainneg)));
+        h1txt('Avg Gain: '   +myrnd(d3.mean(day1  )));
+        var day1md =      d3.round(d3.median(day1),3);
+        h1txt('Median Gain: '+myrnd(day1md         ));
+        h1txt('Min gain: '   +myrnd(d3.min(day1   )));
+        h1txt('Max gain: +'  +myrnd(d3.max(day1   )));
+        h1txt('<- Observation Count');
+        h1txt('Click a bar ->');
+        /* I should start work on graph2 which I call the green histogram.
+        Given a blue bin, I should calculate histogram of green data.
+        Here I use a general method for matching elements 
+        from array1 to elements in array2.
+        That general method is a nested-loop.
+        In SQL-speak, this is an inner join.
+        */
+        var bin2greendays  = function(bnum,bluedata,cpasc_a) {
+          var greendays    = [];
+          // The smaller array should drive the outer loop:
+          var bluedays = bluedata[bnum];
+          bluedays.forEach(function(row){
+            /* cpasc_a holds all the data.
+            I ask it to drive the inner loop:*/
+            cpasc_a.forEach(function(mayberow){
+              // Compare small-array-row to large-array-row:
+              if (row === mayberow.pctlag1) greendays.push(mayberow.pctlead);
+            });
+          });
+          return greendays
+        }
+        /* This function should calculate the green histogram.*/
+        var calch2 = function(binnum,bluedata,cpasc_a,day1) {
+          var greendays = bin2greendays(binnum,bluedata,cpasc_a);
+          greendata         = d3.layout.histogram()
+                             .bins(bincount)
+                             .range(hrange)
+                             (greendays);
+          var chartmax2  = get_chartmax(greendata);
+          chartmax2      = 1.2 * chartmax2;
+          var graph2     = new Rickshaw.Graph({
+            renderer: 'bar',
+            width:    graph_width, 
+            height:   graph_height,
+            min:      chartmin,
+            max:      chartmax2,
+            element:  document.querySelector('#day2histogram'), 
+            series: [{
+              name: 'Count',
+              data: greendata
+            }]
+          });
+          var xAxis2 = new Rickshaw.Graph.Axis.X({graph: graph2});
+          var yAxis2 = new Rickshaw.Graph.Axis.Y({graph: graph2});
+          graph2.render();
+          // I should add text to green histogram:
+          var greendays_pos = greendays.filter(function(x){return (x >= 0.0);});
+          var greendays_neg = greendays.filter(function(x){return (x <  0.0);});
+
+          var greenpdev = d3.round(d3.deviation(greendays_pos),3);
+          var greenndev = d3.round(d3.deviation(greendays_neg),3);
+          var greendays_avg = d3.round(d3.mean(greendays),3);
+          var greendays_md  = d3.round(d3.median(greendays),3);
+          var greendays_min = d3.round(d3.min(greendays),3);
+          var greendays_max = d3.round(d3.max(greendays),3);
+          var day1avg       = d3.round(d3.mean(day1),3);
+          var day1md        = d3.round(d3.median(day1),3);
+          var h2sel       = d3.select('#day2histogram');
+          var h2svg_sel   = h2sel.select('svg');
+          h2svg_sel.append('text').attr('x', graph_width-150).attr('y', graph_height-30)
+            .text('Pct Gain');
+          h2svg_sel.append('text').attr('x', 90).attr('y',20)
+            .text('<- Day2 Observation Count');
+          var h2table_sel = h2sel.append('table')
+          var h2txt = function(txt){h2table_sel.append('tr').append('td').append('span').text(txt);}
+          var myrnd = function(n){return d3.round(n,3)+'%';}
+          h2txt('You clicked bar number: '+(binnum-midbin));
+          h2txt('That bar gives us the green histogram above.');
+          h2txt('The green histogram has '+greendays.length+' observations of day2 gains.');
+          h2txt('Of those, we have '+greendays_pos.length+' above zero,');
+          h2txt('and '+greendays_neg.length+' below zero.');
+          
+          h2txt('Pos-Gains Deviation: '+myrnd(greenpdev    ));
+          h2txt('Neg-Gains Deviation: '+myrnd(greenndev    ));
+          h2txt('The Avg gain was: '   +myrnd(greendays_avg));
+          h2txt('The Median gain was: '+myrnd(greendays_md ));
+          h2txt('The Min gain was: '   +myrnd(greendays_min));
+          h2txt('The Max gain was: '   +myrnd(greendays_max));
+          if (greendays_avg > day1avg) {
+            h2txt('The green-avg-gain ('+myrnd(greendays_avg)+') is higher than blue-avg-gain ('+myrnd(day1avg)+').');
+          } else {
+            h2txt('The green-avg-gain ('+myrnd(greendays_avg)+') is lower  than blue-avg-gain ('+myrnd(day1avg)+').');
+          }
+          if (greendays_md > day1md) {
+            h2txt('The green-median-gain ('+myrnd(greendays_md)+') is higher than blue-median-gain ('+myrnd(day1md)+').');
+          } else {
+            h2txt('The green-median-gain ('+myrnd(greendays_md)+') is lower  than blue-median-gain ('+myrnd(day1md)+').');
+          }
+          // I should scroll to green histogram:
+          slowscroll(2000,'#day2histogram');
+          'end calch2()';
+        }
+        /* When I click on a rect in #day1histogram,
+        I should select svg-element in #day2histogram,
+        remove it and then feed the i-value for rect
+        to a function which calculates day2histogram. */
+        var h1_sel = d3.select('#day1histogram');
+        var h1_rect_sel = h1_sel.selectAll('rect');
+        h1_rect_sel.on('click',function(d,i){
+          var h2sel       = d3.select('#day2histogram');
+          var h2svg_sel   = h2sel.select('svg');
+          var h2table_sel = h2sel.select('table');
+          h2svg_sel.remove();
+          h2table_sel.remove();
+          calch2(i,bluedata,cpasc_a,day1);
+        });
+        // start on #d1d2histogram chart
+        /* This function should loop through the middle blue-bins and
+         help me see which are the good blue-bins by calculating
+         median and avg of the corresponding greendays.*/
+        var g3x_domain_max =  8;
+        var g3x_domain_min = -g3x_domain_max
+        var greendays_a = d3.range(midbin-g3x_domain_max, midbin+g3x_domain_max)
+          .map(function(binnum){
+            var greendays = bin2greendays(binnum,bluedata,cpasc_a);
+            return {
+              gbin:      (binnum-6),
+              greendays: greendays,
+              md:        d3.median(greendays),
+              avg:       d3.mean(greendays)
+            };
+          });
+        // I should prep x-y objects for Rickshaw graph of greenday-medians.
+        var d1d2histogramxy = greendays_a.map(function(gd) {return {x:gd.gbin, y:gd.md};});
+        var yvals   = greendays_a.map(function(gd) {return gd.md               ;});
+        // I should draw the graph now.
+        var g3color    = '#0C0';
+        var graph3     = new Rickshaw.Graph({
+          renderer: 'bar',
+          width:    graph_width, 
+          height:   graph_height,
+          min:      d3.min(yvals)*1.3,
+          max:      d3.max(yvals)*1.2,
+          element:  document.querySelector('#d1d2histogram'), 
+          series: [{
+            color: g3color,
+            name: 'Median',
+            data: d1d2histogramxy
+          }]
+        });
+        var yAxis3 = new Rickshaw.Graph.Axis.Y({graph: graph3});
+        var d1d2histogram_format = function(n) {
+          // I studied graph3, I hard code 12 below:
+          return n-12;
+        }
+        var d1d2histogram_ticks = new Rickshaw.Graph.Axis.X( {
+          graph:       graph3,
+          orientation: 'bottom',
+          element: document.getElementById('x_axis_d1d2histogram'),
+          tickFormat:  d1d2histogram_format
+        });
+        graph3.render();
+        // I should label y-axis
+        var d1d2histogram_svg_sel = d3.select('#d1d2histogram').select('svg');
+        d1d2histogram_svg_sel.append('text').attr('x', 10).attr('y',20)
+          .text('day2 Pct Gain vs day1 Pct Gain');
+        // I should label x-axis
+        d1d2histogram_svg_sel.append('text').attr('x', graph_width-399).attr('y',graph_height-5)
+          .text('day1 Bar Number (1 Bar Spans 0.33%)');
+        /* I should draw a horizontal line at blue median.
+        The syntax below helps me map y-values to pixel-values: */
+        var yblue = d3.scale.linear()
+            .domain([d3.min(yvals), d3.max(yvals)])
+            .range( [ graph_height, 0            ]);
+        var yblue_val = yblue(day1md);
+        var bluepts   = [{ 'x': 0,           'y': yblue_val},
+                         { 'x': graph_width, 'y': yblue_val}];
+        // In SVG a line is called a 'path':
+        var blueline  = d1d2histogram_svg_sel.append('path')
+          .attr('d', lineFunction(bluepts))
+          .attr('stroke', 'blue')
+          .attr('stroke-width', 4)
+          .attr('fill', 'none');
+        // I should label the blue line
+        d1d2histogram_svg_sel.append('text')
+          .attr('x', 5).attr('y', yblue_val-4)
+          .text('Median Pct Gain of All '+day1.length+' day2 Observations is '+day1md+'%');
+        /* When I click on a rect in #d1d2histogram,
+        I should select svg-element in #day2histogram,
+        remove it and then feed the i-value for rect
+        to a function which calculates day2histogram. */
+        var d1d2histogram_rect_sel = d3.select('#d1d2histogram').selectAll('rect');
+        d1d2histogram_rect_sel.on('click',function(d,i){
+          var h2sel       = d3.select('#day2histogram');
+          var h2svg_sel   = h2sel.select('svg');
+          var h2table_sel = h2sel.select('table');
+          h2svg_sel.remove();
+          h2table_sel.remove();
+          // I need to add an integer to i
+          // look at 0th blue bar...
+          // It is midbin
+          // 0th green bar is midbin - 8
+          var new_i = i + midbin - 8;
+          calch2(new_i,bluedata,cpasc_a,day1);
+        });
+        /* hrange3 is smaller than hrange.
+        I can see from graph that hrange is 18 bars
+        and hrange3 is 8 bars wide comparatively*/
+        var hrange3 = [ -6.0*8.0/18.0, 6.0*8.0/18.0 ];
+        /* I should draw vertical line at today current price.
+        The syntax below helps me map x,y-values to pixel-values: */
+        var xldr3 = d3.scale.linear()
+            .domain(hrange3)
+            .range([ xrange_min, xrange_max ]);
+        // I see from the chart that the domain is about -0.1 to 0.3
+        var yldr3 = d3.scale.linear()
+            .domain([-0.1,        0.3])
+            .range( [graph_height, 0 ]);
+        // A line needs two points:
+        var last_day1 = day1[day1.length-1];
+        // On clicky-bars, I should make hover change bar color.
+        d1d2histogram_rect_sel.on('mouseover',function(d,i){d3.select(this).attr('fill','red'  );});
+        d1d2histogram_rect_sel.on('mouseout', function(d,i){d3.select(this).attr('fill',g3color);});
+        h1_rect_sel.on(   'mouseover',function(d,i){d3.select(this).attr('fill','red'  );});
+        h1_rect_sel.on(   'mouseout', function(d,i){d3.select(this).attr('fill',g1color);});
+        var redtxt = d1d2histogram_svg_sel.append('text')
+          .attr('fill','red')
+          .attr('x', 50).attr('y', yldr3(-0.02))
+          .text('Red dot is most recent day1 gain: '+myrnd(last_day1));
+        var reddot2 = d1d2histogram_svg_sel.append('circle')
+          .attr('fill','red')
+          .attr('cx', xldr3(last_day1)).attr('cy', yldr3(0.03))
+          .attr('r',8);
+        'done';
+      });
