@@ -1,4 +1,4 @@
-ruby "2.2.3"
+ruby "1.9.3"
 source 'https://rubygems.org'
 gem 'bundler'       ,'1.10.6'
 gem 'bundle'        ,'0.0.1'
@@ -46,8 +46,6 @@ gem 'therubyracer', platforms: :ruby
 gem 'jquery-rails'
 gem 'turbolinks'
 gem 'jbuilder', '~> 2.0'
-gem 'byebug'
-gem 'web-console', '~> 2.0'
 gem 'rails_stdout_logging','0.0.4'
 gem 'rails_serve_static_assets','0.0.4'
 gem 'rails_12factor','0.0.3'
@@ -56,4 +54,10 @@ gem 'haml-rails'    ,'0.9.0'
 gem 'daemons','1.2.3'
 gem 'eventmachine','1.0.8'
 gem 'thin','1.6.4'
+group :development, :test do
+  gem 'web-console', '~> 2.0'
+  gem 'sqlite3'
+  gem 'debugger'
+end
+
 # end
