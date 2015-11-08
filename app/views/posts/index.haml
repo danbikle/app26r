@@ -2,7 +2,7 @@
 %html(lang="en")
   %head
     %meta(content="text/html; charset=UTF-8" http-equiv="Content-Type")/
-    %title app26r
+    %title d1d2
     %link(href="/graph.css" rel="stylesheet" type="text/css")/
     %link(href="/detail.css" rel="stylesheet" type="text/css")/
     %link(href="/myassets/site.css" media="all" rel="stylesheet")/
@@ -93,6 +93,11 @@
           }
           cpasc_a[i]    = row;
         }
+        // This function should return a date given day1 gain
+        function day1g2date(day1g) {
+          myrows=cpasc_a.filter(function(x){return(x.pctlag1===day1g)});
+          return ' ('+myrows[0].udate+')';
+        }
         // Work towards histogram of day1
         var graph_width  = 840; // RHS
         var xrange_max   = graph_width;
@@ -146,8 +151,7 @@
           element: document.getElementById('x_axis1')
         });
         graph1.render();
-        /* I should draw vertical line at today current price.
-        The syntax below helps me map x,y-values to pixel-values: */
+        // The syntax below helps me map x,y-values to pixel-values: 
         var x = d3.scale.linear()
             .domain(hrange)
             .range([ xrange_min, xrange_max ]);
@@ -188,8 +192,12 @@
         h1txt('Avg Gain: '   +myrnd(d3.mean(day1  )));
         var day1md =      d3.round(d3.median(day1),3);
         h1txt('Median Gain: '+myrnd(day1md         ));
-        h1txt('Min gain: '   +myrnd(d3.min(day1   )));
-        h1txt('Max gain: +'  +myrnd(d3.max(day1   )));
+        var minday1 = d3.min(day1);
+        var maxday1 = d3.max(day1);
+        var minday1date = day1g2date(minday1);
+        var maxday1date = day1g2date(maxday1);
+        h1txt('Min gain: '   +myrnd(minday1)+minday1date);
+        h1txt('Max gain: +'  +myrnd(maxday1)+maxday1date);
         h1txt('<- Observation Count');
         h1txt('Click a bar ->');
         /* I should start work on graph2 which I call the green histogram.
@@ -240,6 +248,7 @@
           // I should add text to green histogram:
           var greendays_pos = greendays.filter(function(x){return (x >= 0.0);});
           var greendays_neg = greendays.filter(function(x){return (x <  0.0);});
+
           var greenpdev = d3.round(d3.deviation(greendays_pos),3);
           var greenndev = d3.round(d3.deviation(greendays_neg),3);
           var greendays_avg = d3.round(d3.mean(greendays),3);
@@ -262,12 +271,15 @@
           h2txt('The green histogram has '+greendays.length+' observations of day2 gains.');
           h2txt('Of those, we have '+greendays_pos.length+' above zero,');
           h2txt('and '+greendays_neg.length+' below zero.');
+          
           h2txt('Pos-Gains Deviation: '+myrnd(greenpdev    ));
           h2txt('Neg-Gains Deviation: '+myrnd(greenndev    ));
           h2txt('The Avg gain was: '   +myrnd(greendays_avg));
           h2txt('The Median gain was: '+myrnd(greendays_md ));
-          h2txt('The Min gain was: '   +myrnd(greendays_min));
-          h2txt('The Max gain was: '   +myrnd(greendays_max));
+          var green_minday = day1g2date(d3.min(greendays));
+          var green_maxday = day1g2date(d3.max(greendays));
+          h2txt('The Min gain was: '   +myrnd(greendays_min)+green_minday);
+          h2txt('The Max gain was: '   +myrnd(greendays_max)+green_maxday);
           if (greendays_avg > day1avg) {
             h2txt('The green-avg-gain ('+myrnd(greendays_avg)+') is higher than blue-avg-gain ('+myrnd(day1avg)+').');
           } else {
