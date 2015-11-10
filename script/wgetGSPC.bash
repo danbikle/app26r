@@ -7,7 +7,7 @@
 # git commit -am moreData
 # git push heroku master
 
-.        ~/app26r/app26r.bash
+.        ~ann/app26r/app26r.bash
 mkdir -p ~ann/app26r/public/csv/
 cd       ~ann/app26r/public/csv/
 
