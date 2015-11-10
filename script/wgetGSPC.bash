@@ -5,6 +5,8 @@
 # I should run this script at 6pm Calif time M-F
 # Then run these shell commands:
 # git commit -am moreData
+# git pull heroku master
+# git commit -am moreData
 # git push heroku master
 
 .        ~ann/app26r/app26r.bash
