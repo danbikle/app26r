@@ -1,6 +1,12 @@
 #!/bin/bash
 
 # ~/app26r/script/wgetGSPC.bash
+
+# I should run this script at 6pm Calif time M-F
+# Then run these shell commands:
+# git commit -am moreData
+# git push heroku master
+
 .        ~/app26r/app26r.bash
 mkdir -p ~ann/app26r/public/csv/
 cd       ~ann/app26r/public/csv/
